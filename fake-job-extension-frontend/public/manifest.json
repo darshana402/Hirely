@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "AI Fake Job Detector",
+  "version": "1.0.0",
+  "description": "AI-powered browser extension for detecting potentially fraudulent job postings.",
+
+  "action": {
+    "default_popup": "index.html"
+  },
+
+  "permissions": [
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "<all_urls>"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}

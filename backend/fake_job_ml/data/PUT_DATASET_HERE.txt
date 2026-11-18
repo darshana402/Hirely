@@ -1,0 +1,5 @@
+Place the EMSCAD/Fake Job Postings CSV in this folder and rename it:
+
+fake_job_postings.csv
+
+Do not upload the dataset into the code repository if its license/terms do not permit redistribution.
