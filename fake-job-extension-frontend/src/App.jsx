@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 
 import {
@@ -13,6 +14,9 @@ import "./App.css";
 
 import logofinal from ".././public/logofinal.jpeg";
 
+// Online Hirely Backend URL
+const API_BASE_URL = "https://hirely-api-darshana402.onrender.com";
+
 
 function App() {
 
@@ -24,11 +28,9 @@ function App() {
 
   const [analysisResult, setAnalysisResult] = useState(null);
 
-
   // ---------------- AUTH STATE ----------------
 
   const [loading, setLoading] = useState(true);
-
 
   // ---------------- SIGNUP ----------------
 
@@ -38,7 +40,6 @@ function App() {
     password: ""
   });
 
-
   // ---------------- LOGIN ----------------
 
   const [loginData, setLoginData] = useState({
@@ -46,11 +47,9 @@ function App() {
     password: ""
   });
 
-
   // ---------------- ERROR ----------------
 
   const [error, setError] = useState("");
-
 
   // =========================================================
   // CHECK FIREBASE AUTH STATE
@@ -63,13 +62,9 @@ function App() {
       (currentUser) => {
 
         if (currentUser) {
-
           setPage("dashboard");
-
         } else {
-
           setPage("login");
-
         }
 
         setLoading(false);
@@ -77,11 +72,9 @@ function App() {
       }
     );
 
-
     return () => unsubscribe();
 
   }, []);
-
 
   // =========================================================
   // SIGNUP
@@ -93,12 +86,9 @@ function App() {
 
     setError("");
 
-
     try {
 
-      // -----------------------------------------------------
       // 1. Create Firebase account
-      // -----------------------------------------------------
 
       const userCredential =
         await createUserWithEmailAndPassword(
@@ -107,27 +97,20 @@ function App() {
           signupData.password
         );
 
-
       const firebaseUser = userCredential.user;
 
-
-      // -----------------------------------------------------
       // 2. Save user's name in Firebase profile
-      // -----------------------------------------------------
 
       await updateProfile(firebaseUser, {
         displayName: signupData.name
       });
 
-
-      // -----------------------------------------------------
       // 3. SAVE USER IN FASTAPI + SQLITE
-      // -----------------------------------------------------
 
       try {
 
         const response = await fetch(
-          "http://127.0.0.1:8000/users",
+          `${API_BASE_URL}/users`,
           {
             method: "POST",
 
@@ -147,7 +130,6 @@ function App() {
           }
         );
 
-
         if (!response.ok) {
 
           const errorData =
@@ -160,16 +142,13 @@ function App() {
 
         }
 
-
         const databaseUser =
           await response.json();
-
 
         console.log(
           "User saved in SQLite:",
           databaseUser
         );
-
 
       } catch (databaseError) {
 
@@ -186,24 +165,13 @@ function App() {
 
       }
 
-
-      // -----------------------------------------------------
       // 4. Account created successfully
-      // -----------------------------------------------------
 
       alert("Account created successfully!");
 
-
-      // Firebase automatically logs the user in after signup.
-      // We sign them out because your current flow sends them
-      // back to the login page.
-
       await signOut(auth);
 
-
-      // -----------------------------------------------------
       // 5. Clear signup form
-      // -----------------------------------------------------
 
       setSignupData({
         name: "",
@@ -211,13 +179,9 @@ function App() {
         password: ""
       });
 
-
-      // -----------------------------------------------------
       // 6. Go back to login
-      // -----------------------------------------------------
 
       setPage("login");
-
 
     } catch (error) {
 
@@ -225,7 +189,6 @@ function App() {
         "Signup error:",
         error
       );
-
 
       if (
         error.code ===
@@ -266,7 +229,6 @@ function App() {
 
   };
 
-
   // =========================================================
   // LOGIN
   // =========================================================
@@ -277,10 +239,7 @@ function App() {
 
     setError("");
 
-
     try {
-
-      // Login using Firebase
 
       await signInWithEmailAndPassword(
         auth,
@@ -288,18 +247,10 @@ function App() {
         loginData.password
       );
 
-
-      // Firebase auth listener will automatically
-      // change the page to dashboard.
-
-
-      // Clear login form
-
       setLoginData({
         email: "",
         password: ""
       });
-
 
     } catch (error) {
 
@@ -308,14 +259,10 @@ function App() {
         error
       );
 
-
       if (
-        error.code ===
-          "auth/invalid-credential" ||
-        error.code ===
-          "auth/wrong-password" ||
-        error.code ===
-          "auth/user-not-found"
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/user-not-found"
       ) {
 
         setError(
@@ -323,8 +270,7 @@ function App() {
         );
 
       } else if (
-        error.code ===
-        "auth/invalid-email"
+        error.code === "auth/invalid-email"
       ) {
 
         setError(
@@ -343,7 +289,6 @@ function App() {
 
   };
 
-
   // =========================================================
   // ANALYZE JOB
   // =========================================================
@@ -352,27 +297,20 @@ function App() {
 
     try {
 
-      // Start loading
-
       setAnalyzing(true);
 
       setJobContent(null);
 
       setAnalysisResult(null);
 
-
-      // -----------------------------------------------------
       // GET CURRENT TAB
-      // -----------------------------------------------------
 
       const tabs = await chrome.tabs.query({
         active: true,
         currentWindow: true
       });
 
-
       const currentTab = tabs[0];
-
 
       if (
         !currentTab ||
@@ -389,10 +327,7 @@ function App() {
 
       }
 
-
-      // -----------------------------------------------------
       // GET CONTENT FROM WEBPAGE
-      // -----------------------------------------------------
 
       chrome.tabs.sendMessage(
         currentTab.id,
@@ -419,7 +354,6 @@ function App() {
 
           }
 
-
           if (
             response &&
             response.success
@@ -430,21 +364,17 @@ function App() {
               response.data
             );
 
-
             setJobContent(
               response.data
             );
 
-
-            // -------------------------------------------------
-            // Send job data to FastAPI
-            // -------------------------------------------------
+            // SEND JOB DATA TO ONLINE FASTAPI BACKEND
 
             try {
 
               const apiResponse =
                 await fetch(
-                  "http://127.0.0.1:8000/analyze",
+                  `${API_BASE_URL}/analyze`,
                   {
                     method: "POST",
 
@@ -469,34 +399,29 @@ function App() {
                   }
                 );
 
-
               if (!apiResponse.ok) {
 
+                const errorData =
+                  await apiResponse.text();
+
                 throw new Error(
-                  "FastAPI returned an error."
+                  errorData ||
+                  "Hirely backend returned an error."
                 );
 
               }
 
-
-              // -------------------------------------------------
               // GET AI RESULT
-              // -------------------------------------------------
 
               const result =
                 await apiResponse.json();
-
 
               console.log(
                 "FastAPI Result:",
                 result
               );
 
-
-              // Save result for UI
-
               setAnalysisResult(result);
-
 
             } catch (apiError) {
 
@@ -506,11 +431,10 @@ function App() {
               );
 
               alert(
-                "Unable to connect to the Hirely AI backend."
+                "Unable to connect to the Hirely AI backend. Please try again."
               );
 
             }
-
 
           } else {
 
@@ -520,15 +444,11 @@ function App() {
 
           }
 
-
-          // Stop loading
-
           setAnalyzing(false);
 
         }
 
       );
-
 
     } catch (error) {
 
@@ -544,7 +464,6 @@ function App() {
 
   };
 
-
   // =========================================================
   // LOGOUT
   // =========================================================
@@ -555,14 +474,9 @@ function App() {
 
       await signOut(auth);
 
-
-      // onAuthStateChanged will automatically
-      // change page to login.
-
       setJobContent(null);
 
       setAnalysisResult(null);
-
 
     } catch (error) {
 
@@ -574,7 +488,6 @@ function App() {
     }
 
   };
-
 
   // =========================================================
   // LOADING
@@ -600,14 +513,15 @@ function App() {
 
   }
 
+  if (analysisResult) {
+    console.log(
+      JSON.stringify(analysisResult.suspicious_factors)
+    );
+  }
 
   // =========================================================
   // LOGIN PAGE
   // =========================================================
-
-  if (analysisResult) {
-  console.log(JSON.stringify(analysisResult.suspicious_factors));
-}
 
   if (page === "login") {
 
@@ -617,23 +531,19 @@ function App() {
 
         <div className="auth-card">
 
-
           <img
             src={logofinal}
             alt="Hirely Logo"
             className="auth-logo"
           />
 
-
           <h1>
             Welcome to Hirely
           </h1>
 
-
           <p className="subtitle">
             AI-powered fake job detection
           </p>
-
 
           {error && (
 
@@ -643,9 +553,7 @@ function App() {
 
           )}
 
-
           <form onSubmit={handleLogin}>
-
 
             <input
               type="email"
@@ -660,7 +568,6 @@ function App() {
               required
             />
 
-
             <input
               type="password"
               placeholder="Password"
@@ -674,19 +581,14 @@ function App() {
               required
             />
 
-
             <button
               type="submit"
               className="primary-btn"
             >
-
               Login
-
             </button>
 
-
           </form>
-
 
           <p className="switch-text">
 
@@ -701,14 +603,11 @@ function App() {
 
               }}
             >
-
               {" "}
               Create Account
-
             </span>
 
           </p>
-
 
         </div>
 
@@ -717,7 +616,6 @@ function App() {
     );
 
   }
-
 
   // =========================================================
   // SIGNUP PAGE
@@ -731,23 +629,19 @@ function App() {
 
         <div className="auth-card">
 
-
           <img
             src={logofinal}
             alt="Hirely Logo"
             className="auth-logo"
           />
 
-
           <h1>
             Create Account
           </h1>
 
-
           <p className="subtitle">
             Start detecting fake jobs
           </p>
-
 
           {error && (
 
@@ -757,9 +651,7 @@ function App() {
 
           )}
 
-
           <form onSubmit={handleSignup}>
-
 
             <input
               type="text"
@@ -774,7 +666,6 @@ function App() {
               required
             />
 
-
             <input
               type="email"
               placeholder="Email address"
@@ -787,7 +678,6 @@ function App() {
               }
               required
             />
-
 
             <input
               type="password"
@@ -802,19 +692,14 @@ function App() {
               required
             />
 
-
             <button
               type="submit"
               className="primary-btn"
             >
-
               Create Account
-
             </button>
 
-
           </form>
-
 
           <p className="switch-text">
 
@@ -829,14 +714,11 @@ function App() {
 
               }}
             >
-
               {" "}
               Login
-
             </span>
 
           </p>
-
 
         </div>
 
@@ -846,7 +728,6 @@ function App() {
 
   }
 
-
   // =========================================================
   // DASHBOARD
   // =========================================================
@@ -855,14 +736,11 @@ function App() {
 
     <div className="dashboard">
 
-
       {/* HEADER */}
 
       <header className="header">
 
-
         <div className="brand">
-
 
           <img
             src={logofinal}
@@ -870,65 +748,48 @@ function App() {
             className="header-logo"
           />
 
-
         </div>
-
 
         <button
           className="logout-btn"
           onClick={handleLogout}
         >
-
           Logout
-
         </button>
 
-
       </header>
-
 
       {/* MAIN CONTENT */}
 
       <main className="main-content">
 
-
         <div className="welcome-section">
-
 
           <h1>
             Job Detection
           </h1>
 
-
           <p>
             Check whether a job posting is legitimate or potentially fraudulent.
           </p>
 
-
         </div>
-
 
         {/* JOB DETECTION CARD */}
 
         <div className="detection-card">
 
-
           <div className="detection-icon">
-
             🔍
-
           </div>
-
 
           <h2>
             Analyze Current Job
           </h2>
 
-
           <p>
             Open a job posting in your browser and click the button below.
           </p>
-
 
           <button
             className="analyze-btn"
@@ -951,23 +812,17 @@ function App() {
 
           </button>
 
-
         </div>
 
-
-        {/* =================================================
-            AI RESULT
-        ================================================= */}
+        {/* AI RESULT */}
 
         <div className="result-card">
-
 
           <div className="result-header">
 
             <h2>
               AI Detection Result
             </h2>
-
 
             {analyzing ? (
 
@@ -991,7 +846,6 @@ function App() {
 
           </div>
 
-
           {/* LOADING */}
 
           {analyzing ? (
@@ -1010,16 +864,11 @@ function App() {
 
             </div>
 
-
           ) : analysisResult ? (
 
-
-            /* =================================================
-               RESULT
-            ================================================= */
+            /* RESULT */
 
             <div className="result-content">
-
 
               <div className="result-main">
 
@@ -1027,29 +876,36 @@ function App() {
                   🛡️
                 </div>
 
-
                 <h3>
                   {analysisResult.final_prediction || analysisResult.prediction}
                 </h3>
 
                 {(analysisResult.extracted_title || analysisResult.extracted_company) ? (
+
                   <p className="job-meta">
+
                     {analysisResult.extracted_title || "Unknown title"}
+
                     {analysisResult.extracted_title && analysisResult.extracted_company && " at "}
+
                     {analysisResult.extracted_company}
+
                   </p>
+
                 ) : (
+
                   <p className="job-meta">
                     ⚠️ Job title/company not detected — please verify this matches the posting you intended to analyze.
                   </p>
+
                 )}
 
               </div>
 
-
               {/* FINAL RISK ANALYSIS */}
 
               <div className="model-result">
+
                 <div className="model-row">
                   <span>Final Risk Score</span>
                   <span>{analysisResult.risk_score}/100</span>
@@ -1066,7 +922,6 @@ function App() {
                 </div>
 
               </div>
-
 
               {/* WHY THIS PREDICTION */}
 
@@ -1088,6 +943,7 @@ function App() {
                     {(() => {
 
                       const words = analysisResult.top_contributing_words;
+
                       const maxWeight = words[0].weight;
 
                       return words.map((item, index) => {
@@ -1097,9 +953,11 @@ function App() {
                           : 0;
 
                         return (
+
                           <p key={index}>
                             "{item.word}" — {strength}% relative strength
                           </p>
+
                         );
 
                       });
@@ -1118,51 +976,38 @@ function App() {
 
               </div>
 
-
             </div>
-
 
           ) : (
 
-
-            /* =================================================
-               NO RESULT
-            ================================================= */
+            /* NO RESULT */
 
             <div className="result-placeholder">
-
 
               <div className="shield">
                 🛡️
               </div>
 
-
               <h3>
                 No result yet
               </h3>
-
 
               <p>
                 Analyze a job posting to see its fraud risk score and AI prediction.
               </p>
 
-
             </div>
 
           )}
 
-
         </div>
 
-
       </main>
-
 
     </div>
 
   );
 
 }
-
 
 export default App;
