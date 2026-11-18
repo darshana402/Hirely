@@ -293,18 +293,15 @@ function App() {
   // ANALYZE JOB
   // =========================================================
 
-  const analyzeJob = async () => {
 
-    try {
+const analyzeJob = async () => {
+  try {
+    setAnalyzing(true);
+    setJobContent(null);
+    setAnalysisResult(null);
 
-      setAnalyzing(true);
-
-      setJobContent(null);
-
-      setAnalysisResult(null);
-
-      // GET CURRENT TAB
-
+    // Check whether the user is using the Chrome extension
+    if (typeof chrome !== "undefined" && chrome.tabs?.query) {
       const tabs = await chrome.tabs.query({
         active: true,
         currentWindow: true
@@ -312,157 +309,95 @@ function App() {
 
       const currentTab = tabs[0];
 
-      if (
-        !currentTab ||
-        !currentTab.id
-      ) {
-
-        alert(
-          "Unable to access the current tab."
-        );
-
-        setAnalyzing(false);
-
-        return;
-
+      if (!currentTab?.id) {
+        throw new Error("Unable to access the current tab.");
       }
-
-      // GET CONTENT FROM WEBPAGE
 
       chrome.tabs.sendMessage(
         currentTab.id,
-
-        {
-          type: "GET_JOB_CONTENT"
-        },
-
+        { type: "GET_JOB_CONTENT" },
         async (response) => {
-
           if (chrome.runtime.lastError) {
-
-            console.error(
-              chrome.runtime.lastError
-            );
-
-            alert(
-              "Unable to read this webpage."
-            );
-
+            console.error(chrome.runtime.lastError);
+            alert("Unable to read this webpage. Try refreshing the job page.");
             setAnalyzing(false);
-
             return;
-
           }
 
-          if (
-            response &&
-            response.success
-          ) {
-
-            console.log(
-              "Extracted Job Data:",
-              response.data
-            );
-
-            setJobContent(
-              response.data
-            );
-
-            // SEND JOB DATA TO ONLINE FASTAPI BACKEND
-
-            try {
-
-              const apiResponse =
-                await fetch(
-                  `${API_BASE_URL}/analyze`,
-                  {
-                    method: "POST",
-
-                    headers: {
-                      "Content-Type":
-                        "application/json"
-                    },
-
-                    body: JSON.stringify({
-
-                      title:
-                        response.data.title,
-
-                      url:
-                        response.data.url,
-
-                      text:
-                        response.data.text
-
-                    })
-
-                  }
-                );
-
-              if (!apiResponse.ok) {
-
-                const errorData =
-                  await apiResponse.text();
-
-                throw new Error(
-                  errorData ||
-                  "Hirely backend returned an error."
-                );
-
-              }
-
-              // GET AI RESULT
-
-              const result =
-                await apiResponse.json();
-
-              console.log(
-                "FastAPI Result:",
-                result
-              );
-
-              setAnalysisResult(result);
-
-            } catch (apiError) {
-
-              console.error(
-                "FastAPI connection error:",
-                apiError
-              );
-
-              alert(
-                "Unable to connect to the Hirely AI backend. Please try again."
-              );
-
-            }
-
-          } else {
-
-            alert(
-              "Could not extract job information."
-            );
-
+          if (!response?.success) {
+            alert("Could not extract job information.");
+            setAnalyzing(false);
+            return;
           }
 
-          setAnalyzing(false);
-
+          await sendJobForAnalysis(response.data);
         }
-
       );
 
-    } catch (error) {
-
-      console.error(error);
-
-      alert(
-        "Something went wrong."
-      );
-
-      setAnalyzing(false);
-
+      return;
     }
 
-  };
+    // Normal deployed website: ask user to paste job details
+    const jobText = prompt(
+      "Paste the complete job description here:"
+    );
+
+    if (!jobText || !jobText.trim()) {
+      setAnalyzing(false);
+      return;
+    }
+
+    await sendJobForAnalysis({
+      title: "Job Posting",
+      url: "",
+      text: jobText.trim()
+    });
+
+  } catch (error) {
+    console.error("Analysis error:", error);
+    alert(error.message || "Something went wrong.");
+    setAnalyzing(false);
+  }
+};
+
+// Send job information to the online backend
+const sendJobForAnalysis = async (jobData) => {
+  try {
+    setJobContent(jobData);
+
+    const apiResponse = await fetch(
+      `${API_BASE_URL}/analyze`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title: jobData.title || "Job Posting",
+          url: jobData.url || "",
+          text: jobData.text || ""
+        })
+      }
+    );
+
+    if (!apiResponse.ok) {
+      const errorData = await apiResponse.text();
+      throw new Error(errorData || "Backend analysis failed.");
+    }
+
+    const result = await apiResponse.json();
+
+    console.log("FastAPI Result:", result);
+    setAnalysisResult(result);
+
+  } catch (error) {
+    console.error("Backend analysis error:", error);
+    alert(error.message || "Unable to analyze this job.");
+  } finally {
+    setAnalyzing(false);
+  }
+};
+
 
   // =========================================================
   // LOGOUT
